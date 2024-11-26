@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            font-size: 1rem;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .toast-success {
+            background-color: #48bb78;
+        }
+        .toast-error {
+            background-color: #f56565;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-lg overflow-hidden">
+        <div class="px-6 py-8 sm:px-10">
+            <h1 class="text-4xl font-bold text-gray-900 text-center mb-8">User Management</h1>
+        </div>
+        <div class="px-6 py-8 sm:px-10">
+            <form id="addUserForm" class="mb-12 space-y-6">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <input type="text" id="name" placeholder="Name" required class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full text-lg border-gray-300 rounded-md p-3">
+                    <input type="email" id="email" placeholder="Email" required class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full text-lg border-gray-300 rounded-md p-3">
+                </div>
+                <button type="submit" class="w-full flex justify-center py-3 px-6 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    Add User
+                </button>
+            </form>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="toast"></div>
+
+    <script>
+        async function fetchUsers() {
+            try {
+                const response = await fetch('http://3.17.165.46:3000/users');
+                const users = await response.json();
+                const tableBody = document.getElementById('userTableBody');
+                tableBody.innerHTML = ''; 
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-5 whitespace-nowrap text-lg text-gray-500">${user.id}</td>
+                        <td class="px-6 py-5 whitespace-nowrap text-lg font-medium text-gray-900">${user.name}</td>
+                        <td class="px-6 py-5 whitespace-nowrap text-lg text-gray-500">${user.email}</td>
+                        <td class="px-6 py-5 whitespace-nowrap text-right text-lg font-medium">
+                            <button onclick="deleteUser(${user.id})" class="text-indigo-600 hover:text-indigo-900 transition duration-150 ease-in-out">Delete</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                showToast('Error fetching users', 'error');
+            }
+        }
+
+        async function addUser(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            try {
+                await fetch('http://3.17.165.46:3000/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+                fetchUsers();
+                document.getElementById('name').value = '';
+                document.getElementById('email').value = '';
+                showToast('User added successfully', 'success');
+            } catch (error) {
+                showToast('Error adding user', 'error');
+            }
+        }
+
+        async function deleteUser(id) {
+            try {
+                await fetch(`http://3.17.165.46:3000/users/${id}`, { method: 'DELETE' });
+                fetchUsers();
+                showToast('User deleted successfully', 'success');
+            } catch (error) {
+                showToast('Error deleting user', 'error');
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        document.getElementById('addUserForm').addEventListener('submit', addUser);
+        window.onload = fetchUsers;
+    </script>
+</body>
+</html>

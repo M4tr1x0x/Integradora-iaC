@@ -1,0 +1,47 @@
+- hosts: webserver
+  become: true
+  tasks:
+    - name: Actualizar el caché de paquetes
+      apt:
+        update_cache: yes
+
+    - name: Instalar PostgreSQL
+      apt:
+        name: postgresql
+        state: present
+
+    - name: Detectar la versión instalada de PostgreSQL
+      shell: |
+        psql --version | awk '{print $3}' | cut -d'.' -f1
+      register: postgres_version
+
+    - name: Mostrar la versión detectada
+      debug:
+        msg: "Versión detectada de PostgreSQL: {{ postgres_version.stdout }}"
+
+    - name: Configurar autenticación local en PostgreSQL
+      lineinfile:
+        path: "/etc/postgresql/{{ postgres_version.stdout }}/main/pg_hba.conf"
+        regexp: "^local   all             all"
+        line: "local   all             all                                     md5"
+        state: present
+
+    - name: Configurar PostgreSQL para escuchar en todas las interfaces
+      lineinfile:
+        path: "/etc/postgresql/{{ postgres_version.stdout }}/main/postgresql.conf"
+        regexp: "^#listen_addresses = 'localhost'"
+        line: "listen_addresses = '*'"
+        state: present
+
+    - name: Reiniciar PostgreSQL para aplicar cambios
+      service:
+        name: postgresql
+        state: restarted
+
+    - name: Crear base de datos
+      ansible.builtin.command:
+        cmd: "sudo -u postgres psql -c 'CREATE DATABASE usersdb;'"
+
+    - name: Crear usuario de PostgreSQL
+      ansible.builtin.command:
+        cmd: "sudo -u postgres psql -c \"CREATE USER admin WITH PASSWORD 'adminpassword'; GRANT ALL PRIVILEGES ON DATABASE usersdb TO admin;\""

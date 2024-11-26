@@ -1,0 +1,28 @@
+- hosts: webserver
+  become: true
+  tasks:
+    - name: Actualizar el cache de paquetes
+      apt:
+        update_cache: yes
+
+    - name: Instalar Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Iniciar y habilitar Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Copiar el archivo HTML
+      copy:
+        src: ./web/index.html  
+        dest: /var/www/html/index.html
+        mode: '0644'
+
+    - name: Reiniciar Nginx para aplicar cambios
+      service:
+        name: nginx
+        state: restarted

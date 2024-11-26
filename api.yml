@@ -1,0 +1,40 @@
+- hosts: webserver
+  become: true
+  tasks:
+    - name: Actualizar el caché de paquetes
+      apt:
+        update_cache: yes
+
+    - name: Instalar Node.js y npm
+      apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+
+    - name: Crear directorio para la API en el EC2
+      file:
+        path: /var/www/api
+        state: directory
+        mode: '0755'
+
+    - name: Copiar archivos de la API al EC2
+      ansible.builtin.synchronize:
+        src: ./api/
+        dest: /var/www/api/
+        delete: yes
+        rsync_opts:
+          - "--exclude=node_modules"
+
+
+
+    - name: Instalar dependencias de la API
+      command: npm install
+      args:
+        chdir: /var/www/api
+
+    - name: Ejecutar la API
+      command: node index.js
+      args:
+        chdir: /var/www/api
+        creates: /var/www/api/index.js
